@@ -4,7 +4,8 @@ define('CS_REST_GET', 'GET');
 define('CS_REST_POST', 'POST');
 define('CS_REST_PUT', 'PUT');
 define('CS_REST_DELETE', 'DELETE');
-define('CS_REST_SOCKET_TIMEOUT', 1);
+define('CS_REST_SOCKET_TIMEOUT', 10);
+define('CS_REST_CALL_TIMEOUT', 10);
 
 function CS_REST_TRANSPORT_get_available($requires_ssl, $log) {
     if(function_exists('curl_init') && function_exists('curl_exec')) {
@@ -38,7 +39,11 @@ class CS_REST_BaseTransport {
     }
     
     function split_and_inflate($response, $may_be_compressed) {        
-        list( $headers, $result ) = explode("\r\n\r\n", $response, 2);
+        $ra = explode("\r\n\r\n", $response);
+        
+        $result = array_pop($ra);
+        $headers = array_pop($ra);
+        
         if($may_be_compressed && preg_match('/^Content-Encoding:\s+gzip\s+$/im', $headers)) {        
             $original_length = strlen($response);
             $result = gzinflate(substr($result, 10, -8));
@@ -84,6 +89,8 @@ class CS_REST_CurlTransport extends CS_REST_BaseTransport {
         curl_setopt($ch, CURLOPT_USERPWD, $call_options['credentials']);
         curl_setopt($ch, CURLOPT_USERAGENT, $call_options['userAgent']);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: '.$call_options['contentType']));
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT_MS, CS_REST_SOCKET_TIMEOUT * 1000);
+        curl_setopt($ch, CURLOPT_TIMEOUT_MS, CS_REST_CALL_TIMEOUT * 1000);
 
         $headers = array();
         $inflate_response = false;
@@ -99,7 +106,7 @@ class CS_REST_CurlTransport extends CS_REST_BaseTransport {
         if($call_options['protocol'] === 'https') {
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-            curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__).'/GoDaddyClass2CA.crt');
+            curl_setopt($ch, CURLOPT_CAINFO, dirname(__FILE__).'/cacert.pem');
         }
 
         switch($call_options['method']) {

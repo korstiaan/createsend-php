@@ -9,19 +9,43 @@ $result = $wrap->import(array(
 	    'EmailAddress' => 'Subscriber email',
 	    'Name' => 'Subscriber name',
 	    'CustomFields' => array(
-            array(
-                'Key' => 'Field Key',
-                'Value' => 'Field Value'
+	        array(
+	            'Key' => 'Field 1 Key',
+	            'Value' => 'Field Value'
+	        ),
+	        array(
+	            'Key' => 'Field 2 Key',
+	            'Value' => 'Field Value'
+	        ),
+	        array(
+	            'Key' => 'Multi Option Field 1',
+	            'Value' => 'Option 1'
+	        ),
+	        array(
+	            'Key' => 'Multi Option Field 1',
+	            'Value' => 'Option 2'
+	        )
             )
-        )
 	),
 	array(
 	    'EmailAddress' => '2nd Subscriber email',
 	    'Name' => '2nd Subscriber name',
 	    'CustomFields' => array(
 	        array(
-	            'Key' => 'Field Key',
+	            'Key' => 'Field 1 Key',
 	            'Value' => 'Field Value'
+	        ),
+	        array(
+	            'Key' => 'Field 2 Key',
+	            'Value' => 'Field Value'
+	        ),
+	        array(
+	            'Key' => 'Multi Option Field 1',
+	            'Value' => 'Option 1'
+	        ),
+	        array(
+	            'Key' => 'Multi Option Field 1',
+	            'Value' => 'Option 2'
 	        )
 	    )
 	)
@@ -36,15 +60,15 @@ if($result->was_successful()) {
     var_dump($result->response);
     echo '</pre>';
     
-    if($result->response->TotalExistingSubscribers > 0) {
-        echo 'Updated '.$result->response->TotalExistingSubscribers.' existing subscribers in the list';        
-    } else if($result->response->TotalNewSubscribers > 0) {
-        echo 'Added '.$result->response->TotalNewSubscribers.' to the list';
-    } else if(count($result->response->DuplicateEmailsInSubmission) > 0) { 
-        echo $result->response->DuplicateEmailsInSubmission.' were duplicated in the provided array.';
+    if($result->response->ResultData->TotalExistingSubscribers > 0) {
+        echo 'Updated '.$result->response->ResultData->TotalExistingSubscribers.' existing subscribers in the list';        
+    } else if($result->response->ResultData->TotalNewSubscribers > 0) {
+        echo 'Added '.$result->response->ResultData->TotalNewSubscribers.' to the list';
+    } else if(count($result->response->ResultData->DuplicateEmailsInSubmission) > 0) { 
+        echo $result->response->ResultData->DuplicateEmailsInSubmission.' were duplicated in the provided array.';
     }
     
     echo 'The following emails failed to import correctly.<pre>';
-    var_dump($result->response->FailureDetails);
+    var_dump($result->response->ResultData->FailureDetails);
 }
 echo '</pre>';

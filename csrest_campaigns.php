@@ -65,7 +65,9 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      *         'FromEmail' => string required The From address for the campaign
      *         'ReplyTo' => string required The Reply-To address for the campaign
      *         'HtmlUrl' => string required A url to download the campaign HTML from
-     *         'TextUrl' => string required A url to download the campaign text version from
+     *         'TextUrl' => string optional A url to download the campaign
+     *           text version from. If not provided, text content will be
+     *           automatically generated from HTML content.
      *         'ListIDs' => array<string> optional An array of list ids to send the campaign to
      *         'SegmentIDs' => array<string> optional An array of segment ids to send the campaign to.
      *     )
@@ -75,7 +77,31 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
     function create($client_id, $campaign_info) {
         return $this->post_request($this->_base_route.'campaigns/'.$client_id.'.json', $campaign_info);
     }
-    
+
+    /**
+     * Creates a new campaign from a template based on the info provided.
+     * At least on of the ListIDs and Segments parameters must be provided
+     * @param string $client_id The client to create the campaign for
+     * @param array $campaign_info The campaign information to use during creation.
+     *     This array should be of the form
+     *     array(
+     *         'Subject' => string required The campaign subject
+     *         'Name' => string required The campaign name
+     *         'FromName' => string required The From name for the campaign
+     *         'FromEmail' => string required The From address for the campaign
+     *         'ReplyTo' => string required The Reply-To address for the campaign
+     *         'ListIDs' => array<string> optional An array of list ids to send the campaign to
+     *         'SegmentIDs' => array<string> optional An array of segment ids to send the campaign to
+     *         'TemplateID' => string required The ID of the template to use
+     *         'TemplateContent' => array required The content which will be used to fill the editable areas of the template
+     *     )
+     * @access public
+     * @return CS_REST_Wrapper_Result A successful response will be the ID of the newly created campaign
+     */
+    function create_from_template($client_id, $campaign_info) {
+        return $this->post_request($this->_base_route.'campaigns/'.$client_id.'/fromtemplate.json', $campaign_info);
+    }
+
     /**
      * Sends a preview of an existing campaign to the specified recipients. 
      * @param array<string> $recipients The recipients to send the preview to. 
@@ -108,6 +134,16 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      */
     function send($schedule) {
         return $this->post_request($this->_campaigns_base_route.'send.json', $schedule);
+    }
+
+    /**
+     * Unschedules the campaign, moving it back into the drafts. If the campaign has been sent or is   
+     * in the process of sending, this api request will fail.
+     * @access public
+     * @return CS_REST_Wrapper_Result A successful response will be empty
+     */
+    function unschedule() {
+        return $this->post_request($this->_campaigns_base_route.'unschedule.json', NULL);
     }
 
     /**
@@ -178,7 +214,7 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      * }
      * )
      */
-    function get_bounces($since, $page_number = NULL, $page_size = NULL, $order_field = NULL, 
+    function get_bounces($since = '', $page_number = NULL, $page_size = NULL, $order_field = NULL, 
         $order_direction = NULL) {
         return $this->get_request_paged($this->_campaigns_base_route.'bounces.json?date='.urlencode($since),
             $page_number, $page_size, $order_field, $order_direction);
@@ -219,11 +255,34 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      *     'Unsubscribed' => The number of recipients who unsubscribed
      *     'Bounced' => The number of recipients who bounced
      *     'UniqueOpened' => The number of recipients who opened
-     *     'WebVersionURL' => The url of the webversion of the campaign
+     *     'WebVersionURL' => The url of the web version of the campaign
+     *     'WebVersionTextURL' => The url of the web version of the text version of the campaign
+     *     'WorldviewURL' => The public Worldview URL for the campaign
+     *     'Forwards' => The number of times the campaign has been forwarded to a friend
+     *     'Likes' => The number of times the campaign has been 'liked' on Facebook
+     *     'Mentions' => The number of times the campaign has been tweeted about
+     *     'SpamComplaints' => The number of recipients who marked the campaign as spam
      * }
      */
     function get_summary() {
         return $this->get_request($this->_campaigns_base_route.'summary.json');
+    }
+
+    /**
+     * Gets the email clients that subscribers used to open the campaign
+     * @access public
+     * @return CS_REST_Wrapper_Result A successful response will be an object of the form
+     * array(
+     *     {
+     *         Client => The email client name
+     *         Version => The email client version
+     *         Percentage => The percentage of subscribers who used this email client
+     *         Subscribers => The actual number of subscribers who used this email client
+     *     }
+     * )
+     */
+    function get_email_client_usage() {
+      return $this->get_request($this->_campaigns_base_route.'emailclientusage.json');
     }
 
     /**
@@ -249,11 +308,17 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      *             'ListID' => The list id of the list containing the subscriber
      *             'Date' => The date of the open
      *             'IPAddress' => The ip address where the open originated
+     *             'Latitude' => The geocoded latitude from the IP address
+     *             'Longitude' => The geocoded longitude from the IP address
+     *             'City' => The geocoded city from the IP address
+     *             'Region' => The geocoded region from the IP address
+     *             'CountryCode' => The geocoded two letter country code from the IP address
+     *             'CountryName' => The geocoded full country name from the IP address
      *         }
      *     )
      * }
      */
-    function get_opens($since, $page_number = NULL, $page_size = NULL, $order_field = NULL, 
+    function get_opens($since = '', $page_number = NULL, $page_size = NULL, $order_field = NULL, 
         $order_direction = NULL) {
         return $this->get_request_paged($this->_campaigns_base_route.'opens.json?date='.urlencode($since), 
             $page_number, $page_size, $order_field, $order_direction);
@@ -283,11 +348,17 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      *             'Date' => The date of the click
      *             'IPAddress' => The ip address where the click originated
      *             'URL' => The url that the subscriber clicked on
+     *             'Latitude' => The geocoded latitude from the IP address
+     *             'Longitude' => The geocoded longitude from the IP address
+     *             'City' => The geocoded city from the IP address
+     *             'Region' => The geocoded region from the IP address
+     *             'CountryCode' => The geocoded two letter country code from the IP address
+     *             'CountryName' => The geocoded full country name from the IP address
      *         }
      *     )
      * }
      */
-    function get_clicks($since, $page_number = NULL, $page_size = NULL, $order_field = NULL, 
+    function get_clicks($since = '', $page_number = NULL, $page_size = NULL, $order_field = NULL, 
         $order_direction = NULL) {
         return $this->get_request_paged($this->_campaigns_base_route.'clicks.json?date='.urlencode($since), 
             $page_number, $page_size, $order_field, $order_direction);
@@ -320,9 +391,41 @@ class CS_REST_Campaigns extends CS_REST_Wrapper_Base {
      *     )
      * }
      */
-    function get_unsubscribes($since, $page_number = NULL, $page_size = NULL, $order_field = NULL, 
+    function get_unsubscribes($since = '', $page_number = NULL, $page_size = NULL, $order_field = NULL, 
         $order_direction = NULL) {
         return $this->get_request_paged($this->_campaigns_base_route.'unsubscribes.json?date='.urlencode($since), 
+            $page_number, $page_size, $order_field, $order_direction);
+    }
+
+    /**
+     * Gets all spam complaints recorded for a campaign since the provided date
+     * @param string $since The date to start getting spam complaints from
+     * @param int $page_number The page number to get
+     * @param int $page_size The number of records per page
+     * @param string $order_field The field to order the record set by ('EMAIL', 'LIST', 'DATE')
+     * @param string $order_direction The direction to order the record set ('ASC', 'DESC')
+     * @access public
+     * @return CS_REST_Wrapper_Result A successful response will be an object of the form
+     * {
+     *     'ResultsOrderedBy' => The field the results are ordered by
+     *     'OrderDirection' => The order direction
+     *     'PageNumber' => The page number for the result set
+     *     'PageSize' => The page size used
+     *     'RecordsOnThisPage' => The number of records returned
+     *     'TotalNumberOfRecords' => The total number of records available
+     *     'NumberOfPages' => The total number of pages for this collection
+     *     'Results' => array(
+     *         {
+     *             'EmailAddress' => The email address of the subscriber who unsubscribed
+     *             'ListID' => The list id of the list containing the subscriber
+     *             'Date' => The date of the unsubscribe
+     *         }
+     *     )
+     * }
+     */
+    function get_spam($since = '', $page_number = NULL, $page_size = NULL, $order_field = NULL, 
+        $order_direction = NULL) {
+        return $this->get_request_paged($this->_campaigns_base_route.'spam.json?date='.urlencode($since), 
             $page_number, $page_size, $order_field, $order_direction);
     }
 }

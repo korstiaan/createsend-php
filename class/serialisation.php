@@ -1,6 +1,8 @@
 <?php
 
-require_once dirname(__FILE__).'/services_json.php';
+if (!class_exists('Services_JSON')) {
+    require_once dirname(__FILE__).'/services_json.php';
+}
 
 function CS_REST_SERIALISATION_get_available($log) { 
     $log->log_message('Getting serialiser', __FUNCTION__, CS_REST_LOG_VERBOSE);
@@ -58,6 +60,7 @@ class CS_REST_NativeJsonSerialiser extends CS_REST_BaseSerialiser {
     }
 
     function serialise($data) {
+    	if(is_null($data) || $data == '') return '';
         return json_encode($this->check_encoding($data));
     }
 
@@ -102,6 +105,7 @@ class CS_REST_ServicesJsonSerialiser extends CS_REST_BaseSerialiser {
     }
     
     function serialise($data) {
+    	if(is_null($data) || $data == '') return '';
         return $this->_serialiser->encode($this->check_encoding($data));
     }
     
